@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAWABI | Online Material Management Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%); min-height: 100vh; }
+        .glass-card { background: white; border-radius: 24px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.05); }
+        .btn-primary { background: linear-gradient(135deg, #1e3a5f 0%, #0f2b48 100%); color: white; transition: all 0.2s; cursor: pointer; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .btn-success { background: #10b981; color: white; cursor: pointer; }
+        .btn-success:hover { background: #059669; }
+        .btn-warning { background: #f59e0b; color: white; cursor: pointer; }
+        .btn-danger { background: #ef4444; color: white; cursor: pointer; }
+        .btn-secondary { background: #64748b; color: white; cursor: pointer; }
+        .btn-info { background: #3b82f6; color: white; cursor: pointer; }
+        input, select, textarea { width: 100%; padding: 12px 16px; margin: 8px 0; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 14px; }
+        input:focus, select:focus { outline: none; border-color: #1e3a5f; box-shadow: 0 0 0 3px rgba(30,58,95,0.1); }
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; display: inline-block; }
+        .status-approved { background: #d1fae5; color: #065f46; }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-blocked { background: #fee2e2; color: #991b1b; }
+        .notification-badge { position: absolute; top: -8px; right: -8px; background: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 10px; font-weight: bold; min-width: 18px; text-align: center; }
+        .notification-item { padding: 12px 16px; border-bottom: 1px solid #e2e8f0; cursor: pointer; transition: 0.2s; }
+        .notification-item:hover { background: #f1f5f9; }
+        .notification-item.unread { background: #eff6ff; }
+        .login-container { background: white; border-radius: 28px; padding: 40px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); max-width: 450px; width: 100%; }
+        .logo { width: 60px; height: 60px; border-radius: 30px; object-fit: cover; cursor: pointer; border: 3px solid #1e3a5f; }
+        .dropdown { position: relative; display: inline-block; }
+        .dropdown-content { display: none; position: absolute; right: 0; top: 100%; background: white; min-width: 200px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); border-radius: 12px; z-index: 50; margin-top: 8px; }
+        .dropdown-content a { color: #334155; padding: 12px 16px; display: block; cursor: pointer; font-size: 14px; }
+        .dropdown-content a:hover { background: #eff6ff; }
+        .dropdown:hover .dropdown-content { display: block; }
+        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; max-width: 750px; width: 90%; padding: 28px; border-radius: 24px; max-height: 85vh; overflow-y: auto; }
+        .request-card { transition: 0.2s; cursor: pointer; border: 1px solid #e2e8f0; border-radius: 14px; margin-bottom: 12px; padding: 16px; background: white; }
+        .request-card:hover { transform: translateX(5px); border-color: #1e3a5f; background: #f8fafc; }
+        .stat-card { background: white; border-radius: 20px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.2s; border: 1px solid #e2e8f0; }
+        .stat-card:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-weight: 600; font-size: 13px; color: #475569; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .item-row { display: flex; gap: 12px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
+        .notification-dropdown { position: relative; display: inline-block; }
+        .notification-dropdown-content { display: none; position: absolute; right: 0; top: 45px; background: white; min-width: 350px; max-height: 450px; overflow-y: auto; box-shadow: 0 8px 16px rgba(0,0,0,0.15); border-radius: 16px; z-index: 60; }
+        .notification-dropdown:hover .notification-dropdown-content { display: block; }
+        .edit-icon { cursor: pointer; color: #3b82f6; margin-left: 8px; }
+        .edit-icon:hover { color: #1e3a5f; }
+        .online-badge { background: #10b981; color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; display: inline-flex; align-items: center; gap: 6px; }
+        .export-import-bar { background: #f1f5f9; padding: 12px; border-radius: 16px; margin-bottom: 16px; display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+        @media (max-width: 640px) {
+            .login-container { padding: 24px; margin: 16px; }
+            .stat-card { padding: 12px; }
+            .notification-dropdown-content { min-width: 280px; right: -20px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Login Screen -->
+<div id="loginScreen" class="min-h-screen flex items-center justify-center p-4">
+    <div class="login-container text-center">
+        <div class="flex justify-center mb-4">
+            <img id="loginLogo" src="https://placehold.co/80x80/1e3a5f/ffffff?text=RSC" class="logo" onclick="uploadLogo()">
+        </div>
+        <h2 class="text-2xl font-bold" style="color:#1e3a5f;">RAWABI <span style="color:#0f2b48;">SPECIALIZED CONTRACTING</span></h2>
+        <p class="text-gray-500 mt-1 mb-6">????? ????????? ???????? | Online Portal</p>
+        
+        <div class="form-group">
+            <input type="email" id="loginEmail" placeholder="Email Address" value="admin@rawabi.com">
+        </div>
+        <div class="form-group">
+            <input type="password" id="loginPassword" placeholder="Password" value="admin123">
+        </div>
+        <button onclick="doLogin()" class="btn-primary w-full py-3 rounded-xl font-semibold">Login</button>
+        
+        <div class="flex justify-between mt-4 text-sm">
+            <a href="#" onclick="showRegister()" class="text-blue-700 hover:underline">Create Account</a>
+            <a href="#" onclick="showForgot()" class="text-blue-700 hover:underline">Forgot Password?</a>
+        </div>
+        
+        <div class="mt-6 text-xs text-gray-400 border-t pt-4">
+            <p><i class="fas fa-globe mr-1"></i> <strong>Online Portal</strong> - Share the link with your team!</p>
+            <p class="mt-1">Demo: admin@rawabi.com / admin123</p>
+        </div>
+    </div>
+</div>
+
+<!-- Register Screen -->
+<div id="registerScreen" class="min-h-screen flex items-center justify-center p-4" style="display:none;">
+    <div class="login-container">
+        <h2 class="text-2xl font-bold text-center" style="color:#1e3a5f;">CREATE ACCOUNT</h2>
+        <p class="text-gray-500 text-center mb-6">????? ????????? ????????</p>
+        <div class="form-group"><label>Full Name</label><input type="text" id="regFullname" placeholder="Enter your full name"></div>
+        <div class="form-group"><label>Email Address</label><input type="email" id="regEmail" placeholder="you@example.com"></div>
+        <div class="form-group"><label>Password</label><input type="password" id="regPassword" placeholder="Create a password"></div>
+        <div class="form-group"><label>Phone Number</label><input type="tel" id="regPhone" placeholder="+966 XX XXX XXXX"></div>
+        <div class="form-group"><label>Employee Number</label><input type="text" id="regEmpNo" placeholder="Employee ID / Number"></div>
+        <div class="form-group"><label>Role / Position</label><select id="regRole"><option value="staff">Staff Member</option><option value="engineer">Department Engineer</option><option value="manager">Manager</option><option value="purchaser">Purchaser</option><option value="storekeeper">Store Keeper</option></select></div>
+        <div class="form-group"><label>Security Answer</label><input type="text" id="regSecurity" placeholder="e.g., Your mother's maiden name"></div>
+        <button onclick="doRegister()" class="btn-primary w-full py-3 rounded-xl font-semibold mt-2">Register Account</button>
+        <button onclick="showLogin()" class="w-full mt-3 py-3 rounded-xl border-2 border-gray-300 bg-white text-gray-700 hover:bg-gray-50 font-medium">Back to Login</button>
+    </div>
+</div>
+
+<!-- Forgot Screen -->
+<div id="forgotScreen" class="min-h-screen flex items-center justify-center p-4" style="display:none;">
+    <div class="login-container">
+        <h2 class="text-2xl font-bold text-center" style="color:#1e3a5f;">RESET PASSWORD</h2>
+        <div class="form-group"><label>Email Address</label><input type="email" id="forgotEmail" placeholder="Your registered email"></div>
+        <div class="form-group"><label>Security Answer</label><input type="text" id="forgotAnswer" placeholder="Your security answer"></div>
+        <div class="form-group"><label>New Password</label><input type="password" id="forgotNewPass" placeholder="Enter new password"></div>
+        <button onclick="resetPassword()" class="btn-primary w-full py-3 rounded-xl font-semibold">Reset Password</button>
+        <button onclick="showLogin()" class="w-full mt-3 py-3 rounded-xl border-2 border-gray-300 bg-white hover:bg-gray-50">Back to Login</button>
+    </div>
+</div>
+
+<!-- Modals -->
+<div id="changePasswordModal" class="modal"><div class="modal-content" style="max-width: 450px;"><h3 class="font-bold text-xl mb-4">Change Password</h3>
+    <div class="form-group"><label>Current Password</label><input type="password" id="currentPwd"></div>
+    <div class="form-group"><label>New Password</label><input type="password" id="newPwd"></div>
+    <div class="form-group"><label>Confirm New Password</label><input type="password" id="confirmPwd"></div>
+    <div class="flex gap-3 mt-4"><button onclick="changePassword()" class="btn-primary flex-1 py-2 rounded-lg">Update</button><button onclick="closeChangePasswordModal()" class="btn-secondary flex-1 py-2 rounded-lg">Cancel</button></div>
+</div></div>
+
+<div id="deleteAccountModal" class="modal"><div class="modal-content" style="max-width: 400px; text-align: center;">
+    <i class="fas fa-exclamation-triangle text-6xl text-red-500 mb-4"></i>
+    <h3 class="font-bold text-xl mb-2">Delete Account</h3>
+    <p class="text-gray-600 mb-4">Are you sure? This cannot be undone.</p>
+    <div class="flex gap-3"><button onclick="confirmDeleteAccount()" class="btn-danger flex-1 py-2 rounded-lg">Yes, Delete</button><button onclick="closeDeleteAccountModal()" class="btn-secondary flex-1 py-2 rounded-lg">Cancel</button></div>
+</div></div>
+
+<div id="editGateModal" class="modal"><div class="modal-content" style="max-width: 700px;"><h3 class="font-bold text-xl mb-4">Edit Gate Pass</h3><div id="editGateForm"></div><div class="flex gap-3 mt-4"><button onclick="saveEditedGate()" class="btn-success flex-1 py-2 rounded-lg">Save Changes</button><button onclick="closeEditGateModal()" class="btn-secondary flex-1 py-2 rounded-lg">Cancel</button></div></div></div>
+
+<div id="adminEditUserModal" class="modal"><div class="modal-content" style="max-width: 500px;"><h3 class="font-bold text-xl mb-4">Edit User Profile</h3><div id="adminEditUserForm"></div><div class="flex gap-3 mt-4"><button onclick="saveAdminEditUser()" class="btn-success flex-1 py-2 rounded-lg">Save Changes</button><button onclick="closeAdminEditUserModal()" class="btn-secondary flex-1 py-2 rounded-lg">Cancel</button></div></div></div>
+
+<!-- Dashboard -->
+<div id="dashboard" style="display:none;">
+    <div class="container mx-auto p-4 max-w-7xl">
+        <div class="glass-card mb-6 flex justify-between items-center flex-wrap gap-4">
+            <div class="flex items-center gap-4">
+                <img id="headerLogo" src="https://placehold.co/50x50/1e3a5f/ffffff?text=RSC" class="w-12 h-12 rounded-full cursor-pointer" onclick="uploadLogo()">
+                <div><h1 class="text-xl font-bold" style="color:#1e3a5f;">RAWABI SPECIALIZED CONTRACTING</h1><p class="text-xs text-gray-500">Online Portal | Auto-Generated Numbers</p></div>
+            </div>
+            <div class="flex items-center gap-5">
+                <div class="online-badge"><i class="fas fa-globe"></i> Live Online</div>
+                <div class="notification-dropdown relative">
+                    <button class="relative cursor-pointer"><i class="fas fa-bell text-2xl text-gray-600"></i><span id="notificationCount" class="notification-badge" style="display:none;">0</span></button>
+                    <div class="notification-dropdown-content"><div class="p-3 font-bold border-b">Notifications</div><div id="notificationList" class="max-h-80 overflow-y-auto"></div><div class="p-2 border-t text-center"><button onclick="markAllRead()" class="text-xs text-blue-600">Mark all as read</button></div></div>
+                </div>
+                <div class="text-right"><span id="userNameDisplay" class="font-semibold block"></span><span id="userEmpNoDisplay" class="text-xs text-gray-500 block"></span><span id="userRoleDisplay" class="text-xs bg-gray-100 px-3 py-1 rounded-full inline-block mt-1"></span></div>
+                <div class="dropdown"><button class="bg-gray-100 w-10 h-10 rounded-full"><i class="fas fa-user-circle text-xl text-gray-600"></i></button>
+                    <div class="dropdown-content"><a onclick="showChangePasswordModal()"><i class="fas fa-key mr-2"></i> Change Password</a><a onclick="showDeleteAccountModal()"><i class="fas fa-trash-alt mr-2"></i> Delete Account</a><a onclick="logout()"><i class="fas fa-sign-out-alt mr-2"></i> Logout</a></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cross-Device Sync Instructions -->
+        <div class="export-import-bar">
+            <button onclick="showSyncInstructions()" class="btn-info px-4 py-2 rounded-lg text-sm"><i class="fas fa-share-alt"></i> Share Portal Link</button>
+            <button onclick="exportAllData()" class="btn-primary px-4 py-2 rounded-lg text-sm"><i class="fas fa-download"></i> Export Data (Backup)</button>
+            <label class="btn-secondary px-4 py-2 rounded-lg text-sm cursor-pointer"><i class="fas fa-upload"></i> Import Data (Restore)<input type="file" id="importFile" accept=".json" style="display:none" onchange="importData()"></label>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+            <div class="stat-card cursor-pointer" onclick="showSection('myRequests')"><i class="fas fa-file-alt text-2xl text-blue-600"></i><h3 id="myRequestsCount" class="text-2xl font-bold mt-2">0</h3><p class="text-xs text-gray-500">My Requests</p></div>
+            <div class="stat-card cursor-pointer" onclick="showSection('pendingApprovals')"><i class="fas fa-hourglass-half text-2xl text-orange-500"></i><h3 id="pendingCount" class="text-2xl font-bold mt-2">0</h3><p class="text-xs text-gray-500">Pending My Approval</p></div>
+            <div class="stat-card cursor-pointer" onclick="showSection('gatePasses')"><i class="fas fa-truck text-2xl text-blue-600"></i><h3 id="gateCount" class="text-2xl font-bold mt-2">0</h3><p class="text-xs text-gray-500">Gate Passes</p></div>
+            <div class="stat-card cursor-pointer" onclick="showSection('materialRequests')"><i class="fas fa-clipboard-list text-2xl text-green-600"></i><h3 id="requestCount" class="text-2xl font-bold mt-2">0</h3><p class="text-xs text-gray-500">Material Requests</p></div>
+            <div class="stat-card cursor-pointer" onclick="showSection('approved')"><i class="fas fa-check-circle text-2xl text-green-600"></i><h3 id="approvedCount" class="text-2xl font-bold mt-2">0</h3><p class="text-xs text-gray-500">Approved</p></div>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <button onclick="showGateForm()" class="btn-primary py-3 rounded-xl font-semibold"><i class="fas fa-truck mr-2"></i> Create Gate Pass</button>
+            <button onclick="showRequestForm()" class="btn-primary py-3 rounded-xl font-semibold"><i class="fas fa-clipboard-list mr-2"></i> Create Material Request</button>
+            <button onclick="showSection('pendingApprovals')" class="btn-warning py-3 rounded-xl font-semibold"><i class="fas fa-check-double mr-2"></i> My Pending Approvals</button>
+            <button onclick="showSection('notifications')" class="btn-secondary py-3 rounded-xl font-semibold"><i class="fas fa-bell mr-2"></i> All Notifications</button>
+        </div>
+
+        <div id="adminPanel" class="glass-card mb-6" style="display:none;"><h3 class="font-bold mb-3"><i class="fas fa-shield-alt mr-2"></i>Admin Control Center</h3><div class="flex gap-3 flex-wrap"><button onclick="showUsers()" class="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm">?? Manage Users</button><button onclick="showAllData()" class="btn-secondary px-4 py-2 rounded-lg text-sm">?? View All Data</button></div></div>
+
+        <div id="contentArea" class="glass-card min-h-[450px]"><div class="text-center py-16"><i class="fas fa-globe text-6xl text-green-500 mb-4"></i><p class="text-gray-500 text-lg">Online Portal Active</p><p class="text-gray-400 text-sm mt-2">Share this link with your team | Gate Pass: GP-0001 | Material Request: MR-0001</p></div></div>
+    </div>
+</div>
+
+<div id="modal" class="modal"><div class="modal-content"><h3 id="modalTitle" class="font-bold text-xl mb-3">Message</h3><p id="modalMsg" class="my-4 text-gray-600"></p><button onclick="closeModal()" class="btn-primary px-6 py-2 rounded-lg">OK</button></div></div>
+
+<script>
+    // ============ DATA STORAGE ============
+    let currentUser = null;
+    let users = JSON.parse(localStorage.getItem('rawabi_users_online_final')) || [];
+    let gatePasses = JSON.parse(localStorage.getItem('rawabi_gatepasses_online_final')) || [];
+    let materialRequests = JSON.parse(localStorage.getItem('rawabi_mrequests_online_final')) || [];
+    let notifications = JSON.parse(localStorage.getItem('rawabi_notifications_online_final')) || [];
+    let editGateId = null;
+    let editUserId = null;
+
+    function saveAll() {
+        localStorage.setItem('rawabi_users_online_final', JSON.stringify(users));
+        localStorage.setItem('rawabi_gatepasses_online_final', JSON.stringify(gatePasses));
+        localStorage.setItem('rawabi_mrequests_online_final', JSON.stringify(materialRequests));
+        localStorage.setItem('rawabi_notifications_online_final', JSON.stringify(notifications));
+    }
+
+    function addNotification(userId, title, message, requestId, requestType) {
+        notifications.unshift({ id: Date.now().toString(), userId, title, message, requestId, requestType, read: false, createdAt: new Date().toISOString() });
+        saveAll();
+        if (currentUser && currentUser.id === userId) updateNotificationUI();
+    }
+
+    function updateNotificationUI() {
+        const userNotifications = notifications.filter(n => n.userId === currentUser?.id);
+        const unreadCount = userNotifications.filter(n => !n.read).length;
+        const countSpan = document.getElementById('notificationCount');
+        if (unreadCount > 0) { countSpan.style.display = 'inline-block'; countSpan.innerText = unreadCount; }
+        else countSpan.style.display = 'none';
+        const listDiv = document.getElementById('notificationList');
+        if (listDiv) {
+            if (userNotifications.length === 0) listDiv.innerHTML = '<div class="p-4 text-center text-gray-500">No notifications</div>';
+            else listDiv.innerHTML = userNotifications.map(n => `<div class="notification-item ${!n.read ? 'unread' : ''}" onclick="markAsReadAndView('${n.id}', '${n.requestId}', '${n.requestType}')"><div class="font-semibold text-sm">${n.title}</div><div class="text-xs text-gray-600 mt-1">${n.message}</div><div class="text-xs text-gray-400 mt-2">${new Date(n.createdAt).toLocaleString()}</div></div>`).join('');
+        }
+    }
+
+    function markAsReadAndView(notifId, requestId, requestType) {
+        const notif = notifications.find(n => n.id == notifId);
+        if (notif) notif.read = true;
+        saveAll();
+        updateNotificationUI();
+        if (requestId) { closeModal(); setTimeout(() => showDetail(requestId, requestType), 100); }
+    }
+    function markAllRead() { notifications.forEach(n => { if (n.userId === currentUser?.id) n.read = true; }); saveAll(); updateNotificationUI(); }
+
+    // Create default admin account
+    if (users.length === 0) {
+        users.push({ id: '1', full_name: 'System Administrator', email: 'admin@rawabi.com', password: 'admin123', role: 'admin', approved: true, blocked: false, phone: '123456789', emp_no: 'ADMIN001', position: 'System Administrator', security_answer: 'admin' });
+        saveAll();
+    }
+
+    function getNextGateNumber() { return gatePasses.length + 1; }
+    function getNextMRNumber() { return materialRequests.length + 1; }
+    
+    const DEPARTMENTS = ['Civil', 'Electrical', 'Mechanical', 'Mechanic', 'HSE', 'Admin', 'HR'];
+    const LOCATIONS = ['SAMREF', 'Samref Oil Port', 'King Fahd Industrial Port', 'Camp'];
+    const VEHICLE_TYPES = ['Pick-up', 'Boom truck', 'Truck', 'Flatbed', 'JCB', 'Crane', 'Diesel tanker'];
+    const GATE_TYPES = ['Incoming', 'Outgoing'];
+    const UNITS = ['Piece', 'Pallet', 'Carton', 'Bundle', 'Package', 'Roll', 'Box', 'Lot', 'Meter', 'KG', 'Each', 'Set', 'Ton'];
+    const GATE_STEPS = ['user_created', 'approval_dept', 'manager', 'admin'];
+    const GATE_STEP_NAMES = { 'user_created': 'User Created', 'approval_dept': 'Approval Dept', 'manager': 'Manager', 'admin': 'Approved' };
+    const REQ_STEPS = ['user_created', 'storekeeper', 'engineer', 'manager', 'purchaser', 'admin'];
+    const REQ_STEP_NAMES = { 'user_created': 'User Created', 'storekeeper': 'Store Keeper', 'engineer': 'Dept Engineer', 'manager': 'Manager', 'purchaser': 'Purchaser', 'admin': 'Approved' };
+    
+    let gateItems = [{ name: '', qty: 1, unit: 'Piece', remarks: '' }];
+    let reqItems = [{ name: '', qty: 1, unit: 'Piece', remarks: '' }];
+
+    function showModal(title, msg) { document.getElementById('modalTitle').innerText = title; document.getElementById('modalMsg').innerHTML = msg; document.getElementById('modal').style.display = 'flex'; }
+    function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+    function showSyncInstructions() {
+        const currentUrl = window.location.href;
+        showModal('Share Portal Link', `
+            <div class="text-left">
+                <p class="mb-3"><strong>Your Portal is Live Online!</strong></p>
+                <p class="mb-2">Share this link with your team:</p>
+                <div class="bg-gray-100 p-3 rounded-lg mb-3 break-all">
+                    <code>${currentUrl}</code>
+                </div>
+                <button onclick="copyToClipboard('${currentUrl}')" class="btn-primary text-sm px-3 py-1 rounded">Copy Link</button>
+                <hr class="my-3">
+                <p class="font-bold mb-2">?? Important Notes:</p>
+                <ul class="list-disc pl-5 space-y-1">
+                    <li>Each person's data is stored in their own browser</li>
+                    <li>Use <strong>Export Data</strong> and <strong>Import Data</strong> to sync across computers</li>
+                    <li>Admin can export master data and share with team</li>
+                </ul>
+            </div>
+        `);
+    }
+    
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text);
+        showModal('Copied!', 'Portal link copied to clipboard. Share with your team!');
+    }
+
+    function exportAllData() {
+        const data = { users, gatePasses, materialRequests, notifications, version: '1.0', exportDate: new Date().toISOString() };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `rawabi_backup_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showModal('Export Complete', 'Data exported successfully! Share this file with other computers to sync data.');
+    }
+
+    function importData() {
+        const file = document.getElementById('importFile').files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const imported = JSON.parse(e.target.result);
+                if (imported.users) users = imported.users;
+                if (imported.gatePasses) gatePasses = imported.gatePasses;
+                if (imported.materialRequests) materialRequests = imported.materialRequests;
+                if (imported.notifications) notifications = imported.notifications;
+                saveAll();
+                showModal('Import Complete', 'Data imported successfully! Page will refresh.');
+                setTimeout(() => location.reload(), 1500);
+            } catch(err) { showModal('Error', 'Invalid backup file'); }
+        };
+        reader.readAsText(file);
+        document.getElementById('importFile').value = '';
+    }
+
+    // Password Functions
+    function showChangePasswordModal() { document.getElementById('changePasswordModal').style.display = 'flex'; }
+    function closeChangePasswordModal() { document.getElementById('changePasswordModal').style.display = 'none'; }
+    function changePassword() {
+        const current = document.getElementById('currentPwd').value, newPwd = document.getElementById('newPwd').value, confirm = document.getElementById('confirmPwd').value;
+        if (!current || !newPwd || !confirm) { showModal('Error', 'Please fill all fields'); return; }
+        if (currentUser.password !== current) { showModal('Error', 'Current password is incorrect'); return; }
+        if (newPwd !== confirm) { showModal('Error', 'Passwords do not match'); return; }
+        if (newPwd.length < 4) { showModal('Error', 'Password must be at least 4 characters'); return; }
+        currentUser.password = newPwd;
+        const userIndex = users.findIndex(u => u.id === currentUser.id);
+        if (userIndex !== -1) users[userIndex].password = newPwd;
+        saveAll();
+        addNotification(currentUser.id, 'Password Changed', 'Your password has been updated', null, null);
+        showModal('Success', 'Password changed successfully!');
+        closeChangePasswordModal();
+    }
+    
+    function showDeleteAccountModal() { document.getElementById('deleteAccountModal').style.display = 'flex'; }
+    function closeDeleteAccountModal() { document.getElementById('deleteAccountModal').style.display = 'none'; }
+    function confirmDeleteAccount() {
+        users = users.filter(u => u.id !== currentUser.id);
+        gatePasses = gatePasses.filter(g => g.created_by_id !== currentUser.id);
+        materialRequests = materialRequests.filter(r => r.created_by_id !== currentUser.id);
+        saveAll();
+        showModal('Account Deleted', 'Your account has been permanently deleted.');
+        logout();
+        closeDeleteAccountModal();
+    }
+    
+    // Admin Functions
+    function openAdminEditUser(userId) {
+        const user = users.find(u => u.id === userId);
+        if (!user) return;
+        editUserId = userId;
+        document.getElementById('adminEditUserForm').innerHTML = `<div class="form-group"><label>Full Name</label><input type="text" id="edit_fullname" value="${user.full_name}" class="w-full p-2 border rounded"></div><div class="form-group"><label>Email</label><input type="email" id="edit_email" value="${user.email}" class="w-full p-2 border rounded"></div><div class="form-group"><label>Phone</label><input type="text" id="edit_phone" value="${user.phone || ''}" class="w-full p-2 border rounded"></div><div class="form-group"><label>Employee Number</label><input type="text" id="edit_emp_no" value="${user.emp_no || ''}" class="w-full p-2 border rounded"></div><div class="form-group"><label>Position</label><input type="text" id="edit_position" value="${user.position || ''}" class="w-full p-2 border rounded"></div><div class="form-group"><label>Role</label><select id="edit_role" class="w-full p-2 border rounded"><option value="staff" ${user.role === 'staff' ? 'selected' : ''}>Staff</option><option value="engineer" ${user.role === 'engineer' ? 'selected' : ''}>Engineer</option><option value="manager" ${user.role === 'manager' ? 'selected' : ''}>Manager</option><option value="purchaser" ${user.role === 'purchaser' ? 'selected' : ''}>Purchaser</option><option value="storekeeper" ${user.role === 'storekeeper' ? 'selected' : ''}>Store Keeper</option><option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option></select></div>`;
+        document.getElementById('adminEditUserModal').style.display = 'flex';
+    }
+    function saveAdminEditUser() {
+        const user = users.find(u => u.id === editUserId);
+        if (!user) return;
+        user.full_name = document.getElementById('edit_fullname').value;
+        user.email = document.getElementById('edit_email').value;
+        user.phone = document.getElementById('edit_phone').value;
+        user.emp_no = document.getElementById('edit_emp_no').value;
+        user.position = document.getElementById('edit_position').value;
+        user.role = document.getElementById('edit_role').value;
+        saveAll();
+        addNotification(editUserId, 'Profile Updated', 'Your profile has been updated by admin', null, null);
+        showModal('Success', 'User updated!');
+        closeAdminEditUserModal();
+        showUsers();
+    }
+    function closeAdminEditUserModal() { document.getElementById('adminEditUserModal').style.display = 'none'; }
+    function adminDeleteUser(userId) { if(confirm('Delete this user?')) { users = users.filter(u => u.id !== userId); gatePasses = gatePasses.filter(g => g.created_by_id !== userId); materialRequests = materialRequests.filter(r => r.created_by_id !== userId); saveAll(); showModal('Success', 'User deleted'); showUsers(); loadStats(); } }
+    function adminBlockUser(userId) { const user = users.find(u => u.id === userId); if(user) { user.blocked = !user.blocked; if(user.blocked) user.approved = false; saveAll(); addNotification(userId, user.blocked ? 'Account Blocked' : 'Account Unblocked', user.blocked ? 'Your account has been blocked' : 'Your account has been unblocked', null, null); showModal('Success', user.blocked ? 'User blocked' : 'User unblocked'); showUsers(); loadStats(); } }
+    function adminApproveUser(userId) { const user = users.find(u => u.id === userId); if(user) { user.approved = true; user.blocked = false; saveAll(); addNotification(userId, 'Account Approved', 'Your account has been approved', null, null); showModal('Success', 'User approved'); showUsers(); loadStats(); } }
+    
+    // Edit Gate Pass Functions
+    function openEditGateModal(id) { const gate = gatePasses.find(g => g.id === id); if(!gate) return; editGateId = id; let itemsHtml = ''; gate.items.forEach((item, idx) => { itemsHtml += `<div class="item-row" data-idx="${idx}"><span class="w-8 font-bold">${idx+1}</span><input type="text" id="edit_item_name_${idx}" value="${item.name}" class="flex-1 p-2 border rounded"><input type="number" id="edit_item_qty_${idx}" value="${item.qty}" class="w-24 p-2 border rounded"><select id="edit_item_unit_${idx}" class="w-28 p-2 border rounded">${UNITS.map(u => `<option ${item.unit === u ? 'selected' : ''}>${u}</option>`).join('')}</select><input type="text" id="edit_item_remarks_${idx}" value="${item.remarks || ''}" class="flex-1 p-2 border rounded"><button onclick="removeEditItem(${idx})" class="bg-red-500 text-white px-3 py-1 rounded">?</button></div>`; });
+        document.getElementById('editGateForm').innerHTML = `<div class="grid md:grid-cols-2 gap-4"><div><label>Department</label><input type="text" id="edit_dept" value="${gate.department}" class="w-full p-2 border rounded"></div><div><label>Gate Date</label><input type="date" id="edit_date" value="${gate.gate_date}" class="w-full p-2 border rounded"></div><div><label>Driver</label><input type="text" id="edit_driver" value="${gate.driver_name}" class="w-full p-2 border rounded"></div><div><label>Vehicle No</label><input type="text" id="edit_vehicle" value="${gate.vehicle_no}" class="w-full p-2 border rounded"></div><div><label>Vehicle Type</label><select id="edit_vehicleType" class="w-full p-2 border rounded">${VEHICLE_TYPES.map(v => `<option ${gate.vehicle_type === v ? 'selected' : ''}>${v}</option>`).join('')}</select></div><div><label>Gate Type</label><select id="edit_gateType" class="w-full p-2 border rounded">${GATE_TYPES.map(t => `<option ${gate.gate_type === t ? 'selected' : ''}>${t}</option>`).join('')}</select></div><div><label>Location</label><select id="edit_location" class="w-full p-2 border rounded">${LOCATIONS.map(l => `<option ${gate.location === l ? 'selected' : ''}>${l}</option>`).join('')}</select></div></div><div class="mt-4"><label class="font-bold">Materials:</label><div id="editItemsContainer">${itemsHtml}</div><button onclick="addEditItem()" class="bg-gray-500 text-white px-4 py-2 rounded text-sm mt-2">+ Add Item</button></div>`;
+        document.getElementById('editGateModal').style.display = 'flex';
+    }
+    function addEditItem() { const container = document.getElementById('editItemsContainer'); const idx = container.children.length; const newItem = `<div class="item-row" data-idx="${idx}"><span class="w-8 font-bold">${idx+1}</span><input type="text" id="edit_item_name_${idx}" class="flex-1 p-2 border rounded"><input type="number" id="edit_item_qty_${idx}" value="1" class="w-24 p-2 border rounded"><select id="edit_item_unit_${idx}" class="w-28 p-2 border rounded">${UNITS.map(u => `<option>${u}</option>`).join('')}</select><input type="text" id="edit_item_remarks_${idx}" class="flex-1 p-2 border rounded"><button onclick="removeEditItem(${idx})" class="bg-red-500 text-white px-3 py-1 rounded">?</button></div>`; container.insertAdjacentHTML('beforeend', newItem); }
+    function removeEditItem(idx) { const item = document.querySelector(`.item-row[data-idx="${idx}"]`); if(item) item.remove(); const rows = document.querySelectorAll('#editItemsContainer .item-row'); rows.forEach((row, newIdx) => { row.setAttribute('data-idx', newIdx); row.querySelector('span').innerText = newIdx + 1; }); }
+    function saveEditedGate() { const gate = gatePasses.find(g => g.id === editGateId); if(!gate) return; const items = []; const rows = document.querySelectorAll('#editItemsContainer .item-row'); rows.forEach((row, idx) => { const name = document.getElementById(`edit_item_name_${idx}`)?.value || ''; if(name.trim()) items.push({ sr: idx+1, name, qty: document.getElementById(`edit_item_qty_${idx}`)?.value || 1, unit: document.getElementById(`edit_item_unit_${idx}`)?.value || 'Piece', remarks: document.getElementById(`edit_item_remarks_${idx}`)?.value || '' }); }); if(items.length === 0) { showModal('Error', 'At least one item required'); return; } gate.department = document.getElementById('edit_dept').value; gate.gate_date = document.getElementById('edit_date').value; gate.driver_name = document.getElementById('edit_driver').value; gate.vehicle_no = document.getElementById('edit_vehicle').value; gate.vehicle_type = document.getElementById('edit_vehicleType').value; gate.gate_type = document.getElementById('edit_gateType').value; gate.location = document.getElementById('edit_location').value; gate.items = items; saveAll(); addNotification(gate.created_by_id, 'Gate Pass Updated', `Gate Pass ${gate.display_number} updated`, gate.id, 'gate'); showModal('Success', 'Gate Pass updated!'); closeEditGateModal(); showSection('gatePasses'); }
+    function closeEditGateModal() { document.getElementById('editGateModal').style.display = 'none'; }
+    
+    function uploadLogo() { const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*'; input.onchange = (e) => { const file = e.target.files[0]; if(file) { const reader = new FileReader(); reader.onload = (ev) => { const imgData = ev.target.result; document.getElementById('loginLogo').src = imgData; document.getElementById('headerLogo').src = imgData; localStorage.setItem('company_logo_online_final', imgData); showModal('Success', 'Logo updated!'); }; reader.readAsDataURL(file); } }; input.click(); }
+    const savedLogo = localStorage.getItem('company_logo_online_final'); if(savedLogo) { if(document.getElementById('loginLogo')) document.getElementById('loginLogo').src = savedLogo; if(document.getElementById('headerLogo')) document.getElementById('headerLogo').src = savedLogo; }
+    
+    function showRegister() { document.getElementById('loginScreen').style.display = 'none'; document.getElementById('registerScreen').style.display = 'flex'; }
+    function showLogin() { document.getElementById('registerScreen').style.display = 'none'; document.getElementById('forgotScreen').style.display = 'none'; document.getElementById('loginScreen').style.display = 'flex'; }
+    function showForgot() { document.getElementById('loginScreen').style.display = 'none'; document.getElementById('forgotScreen').style.display = 'flex'; }
+    
+    function doRegister() {
+        const fullname = document.getElementById('regFullname').value, email = document.getElementById('regEmail').value, password = document.getElementById('regPassword').value, phone = document.getElementById('regPhone').value, empNo = document.getElementById('regEmpNo').value, role = document.getElementById('regRole').value, security = document.getElementById('regSecurity').value;
+        if(!fullname || !email || !password) { showModal('Error', 'Fill all required fields'); return; }
+        if(users.find(u => u.email === email)) { showModal('Error', 'Email exists'); return; }
+        users.push({ id: Date.now().toString(), full_name: fullname, email, password, phone, emp_no: empNo, role, security_answer: security, approved: false, blocked: false });
+        saveAll();
+        showModal('Success', 'Registration submitted! Wait for admin approval.');
+        showLogin();
+    }
+    
+    function resetPassword() {
+        const email = document.getElementById('forgotEmail').value, answer = document.getElementById('forgotAnswer').value, newPass = document.getElementById('forgotNewPass').value;
+        const user = users.find(u => u.email === email && u.security_answer === answer);
+        if(!user) { showModal('Error', 'Invalid email or answer'); return; }
+        user.password = newPass; saveAll(); showModal('Success', 'Password reset!'); showLogin();
+    }
+    
+    function doLogin() {
+        const email = document.getElementById('loginEmail').value, password = document.getElementById('loginPassword').value;
+        const user = users.find(u => u.email === email && u.password === password);
+        if(!user) { showModal('Login Failed', 'Invalid credentials'); return; }
+        if(!user.approved) { showModal('Pending', 'Awaiting admin approval'); return; }
+        if(user.blocked) { showModal('Blocked', 'Account blocked'); return; }
+        currentUser = user;
+        localStorage.setItem('rawabi_current_online_final', JSON.stringify({ id: currentUser.id }));
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        document.getElementById('userNameDisplay').innerHTML = user.full_name;
+        document.getElementById('userEmpNoDisplay').innerHTML = user.emp_no ? `Emp: ${user.emp_no}` : '';
+        document.getElementById('userRoleDisplay').innerHTML = user.role;
+        if(user.role === 'admin') document.getElementById('adminPanel').style.display = 'block';
+        loadStats(); updateNotificationUI(); showSection('dashboard');
+    }
+    
+    function logout() { currentUser = null; localStorage.removeItem('rawabi_current_online_final'); document.getElementById('dashboard').style.display = 'none'; document.getElementById('loginScreen').style.display = 'flex'; }
+    
+    function loadStats() {
+        const myGates = gatePasses.filter(g => g.created_by_id === currentUser?.id);
+        const myReqs = materialRequests.filter(r => r.created_by_id === currentUser?.id);
+        document.getElementById('myRequestsCount').innerText = myGates.length + myReqs.length;
+        document.getElementById('gateCount').innerText = gatePasses.length;
+        document.getElementById('requestCount').innerText = materialRequests.length;
+        let pending = 0;
+        if(currentUser?.role === 'approval_dept') pending = gatePasses.filter(g => g.approval_step === 'approval_dept').length;
+        else if(currentUser?.role === 'manager') pending = gatePasses.filter(g => g.approval_step === 'manager').length + materialRequests.filter(r => r.approval_step === 'manager').length;
+        else if(currentUser?.role === 'admin') pending = gatePasses.filter(g => g.approval_step === 'admin').length + materialRequests.filter(r => r.approval_step === 'admin').length;
+        else if(currentUser?.role === 'storekeeper') pending = materialRequests.filter(r => r.approval_step === 'storekeeper').length;
+        else if(currentUser?.role === 'engineer') pending = materialRequests.filter(r => r.approval_step === 'engineer').length;
+        else if(currentUser?.role === 'purchaser') pending = materialRequests.filter(r => r.approval_step === 'purchaser').length;
+        document.getElementById('pendingCount').innerText = pending;
+        const approved = gatePasses.filter(g => g.approval_step === 'admin').length + materialRequests.filter(r => r.approval_step === 'admin').length;
+        document.getElementById('approvedCount').innerText = approved;
+    }
+    
+    function showSection(section) {
+        if(section === 'myRequests') showMyRequests();
+        else if(section === 'pendingApprovals') showPendingApprovals();
+        else if(section === 'gatePasses') renderList(gatePasses, 'gate', 'All Gate Passes');
+        else if(section === 'materialRequests') renderList(materialRequests, 'request', 'All Material Requests');
+        else if(section === 'approved') renderList([...gatePasses.filter(g=>g.approval_step==='admin'), ...materialRequests.filter(r=>r.approval_step==='admin')], null, 'Approved Requests');
+        else if(section === 'notifications') showNotificationsList();
+        else if(section === 'dashboard') document.getElementById('contentArea').innerHTML = '<div class="text-center py-16"><i class="fas fa-globe text-6xl text-green-500 mb-4"></i><p class="text-gray-500 text-lg">Online Portal Active</p><p class="text-gray-400 text-sm mt-2">Share this link with your team | Gate Pass: GP-0001 | Material Request: MR-0001</p></div>';
+    }
+    
+    function showMyRequests() {
+        const myGates = gatePasses.filter(g => g.created_by_id === currentUser?.id);
+        const myReqs = materialRequests.filter(r => r.created_by_id === currentUser?.id);
+        let html = '<h2 class="text-xl font-bold mb-5"><i class="fas fa-file-alt mr-2"></i>My Requests</h2><div class="space-y-3">';
+        [...myGates, ...myReqs].forEach(r => {
+            const type = r.department ? 'gate' : 'request';
+            const typeName = r.department ? 'Gate Pass' : 'Material Request';
+            const status = r.approval_step === 'admin' ? 'Approved' : (REQ_STEP_NAMES[r.approval_step] || GATE_STEP_NAMES[r.approval_step] || 'Pending');
+            html += `<div class="request-card" onclick="showDetail('${r.id}', '${type}')"><div class="flex justify-between items-center flex-wrap gap-2"><b class="text-lg">${typeName}: ${r.display_number || r.id}</b><span class="status-badge ${r.approval_step==='admin'?'status-approved':'status-pending'}">${status}</span></div><div class="text-sm text-gray-500 mt-2">Created: ${new Date(r.created_at).toLocaleString()}</div></div>`;
+        });
+        html += (myGates.length + myReqs.length === 0) ? '<p class="text-center text-gray-500 py-8">No requests created yet</p>' : '';
+        html += '</div><button onclick="showGateForm()" class="btn-secondary mt-4 py-2 px-4 rounded-lg">+ Create New Request</button>';
+        document.getElementById('contentArea').innerHTML = html;
+    }
+    
+    function showPendingApprovals() {
+        let pendingItems = [];
+        if(currentUser?.role === 'approval_dept') pendingItems = gatePasses.filter(g => g.approval_step === 'approval_dept').map(g => ({ ...g, type: 'gate' }));
+        else if(currentUser?.role === 'manager') pendingItems = [...gatePasses.filter(g => g.approval_step === 'manager').map(g => ({ ...g, type: 'gate' })), ...materialRequests.filter(r => r.approval_step === 'manager').map(r => ({ ...r, type: 'request' }))];
+        else if(currentUser?.role === 'admin') pendingItems = [...gatePasses.filter(g => g.approval_step === 'admin').map(g => ({ ...g, type: 'gate' })), ...materialRequests.filter(r => r.approval_step === 'admin').map(r => ({ ...r, type: 'request' }))];
+        else if(currentUser?.role === 'storekeeper') pendingItems = materialRequests.filter(r => r.approval_step === 'storekeeper').map(r => ({ ...r, type: 'request' }));
+        else if(currentUser?.role === 'engineer') pendingItems = materialRequests.filter(r => r.approval_step === 'engineer').map(r => ({ ...r, type: 'request' }));
+        else if(currentUser?.role === 'purchaser') pendingItems = materialRequests.filter(r => r.approval_step === 'purchaser').map(r => ({ ...r, type: 'request' }));
+        let html = '<h2 class="text-xl font-bold mb-5"><i class="fas fa-hourglass-half mr-2"></i>Pending My Approval</h2><div class="space-y-3">';
+        pendingItems.forEach(item => { html += `<div class="request-card" onclick="showDetail('${item.id}', '${item.type}')"><div class="flex justify-between"><b>${item.type === 'gate' ? 'Gate Pass' : 'Material Request'}: ${item.display_number || item.id}</b><span class="status-badge status-pending">Awaiting Your Approval</span></div><div class="text-sm text-gray-500 mt-2">From: ${item.created_by} | ${new Date(item.created_at).toLocaleString()}</div></div>`; });
+        html += (pendingItems.length === 0) ? '<p class="text-center text-gray-500 py-8">No pending approvals</p>' : '';
+        html += '</div>'; document.getElementById('contentArea').innerHTML = html;
+    }
+    
+    function renderList(items, type, title) {
+        let html = `<h2 class="text-xl font-bold mb-5"><i class="fas fa-list mr-2"></i>${title}</h2><div class="space-y-3">`;
+        items.forEach(item => {
+            const itemType = type || (item.department ? 'gate' : 'request');
+            const typeName = itemType === 'gate' ? 'Gate Pass' : 'Material Request';
+            const status = item.approval_step === 'admin' ? 'Approved' : (REQ_STEP_NAMES[item.approval_step] || GATE_STEP_NAMES[item.approval_step] || 'Pending');
+            const editBtn = (itemType === 'gate' && item.approval_step !== 'admin' && item.created_by_id === currentUser?.id) ? `<i class="fas fa-edit edit-icon" onclick="event.stopPropagation(); openEditGateModal('${item.id}')" title="Edit Gate Pass"></i>` : '';
+            html += `<div class="request-card" onclick="showDetail('${item.id}', '${itemType}')"><div class="flex justify-between items-center flex-wrap gap-2"><b>${typeName}: ${item.display_number || item.id} ${editBtn}</b><span class="status-badge ${item.approval_step==='admin'?'status-approved':'status-pending'}">${status}</span></div><div class="text-sm text-gray-500 mt-2">By: ${item.created_by} | ${new Date(item.created_at).toLocaleString()}</div></div>`;
+        });
+        html += (items.length === 0) ? '<p class="text-center text-gray-500 py-8">No records found</p>' : '';
+        html += '</div>'; document.getElementById('contentArea').innerHTML = html;
+    }
+    
+    function showNotificationsList() { updateNotificationUI(); document.getElementById('contentArea').innerHTML = '<h2 class="text-xl font-bold mb-5"><i class="fas fa-bell mr-2"></i>All Notifications</h2><div id="fullNotificationList" class="space-y-2"></div>'; const userNotifications = notifications.filter(n => n.userId === currentUser?.id); const listDiv = document.getElementById('fullNotificationList'); if(listDiv) { if(userNotifications.length === 0) listDiv.innerHTML = '<p class="text-center text-gray-500 py-8">No notifications yet</p>'; else listDiv.innerHTML = userNotifications.map(n => `<div class="notification-item ${!n.read ? 'unread' : ''}" onclick="markAsReadAndView('${n.id}', '${n.requestId}', '${n.requestType}')"><div class="font-semibold">${n.title}</div><div class="text-sm text-gray-600">${n.message}</div><div class="text-xs text-gray-400 mt-1">${new Date(n.createdAt).toLocaleString()}</div></div>`).join(''); } }
+    
+    function showUsers() {
+        let html = `<h2 class="text-xl font-bold mb-5"><i class="fas fa-users mr-2"></i>User Management</h2><div class="overflow-x-auto"><table class="w-full border rounded-lg"><thead><tr class="bg-gray-100"><th class="p-3">Name</th><th class="p-3">Email</th><th class="p-3">Emp No</th><th class="p-3">Role</th><th class="p-3">Status</th><th class="p-3">Actions</th></tr></thead><tbody>`;
+        users.forEach(u => {
+            const status = u.blocked ? 'Blocked' : (u.approved ? 'Active' : 'Pending');
+            const statusClass = u.blocked ? 'status-blocked' : (u.approved ? 'status-approved' : 'status-pending');
+            const isCurrentUser = u.id === currentUser?.id;
+            html += `<tr class="border-b"><td class="p-3">${u.full_name}</td><td class="p-3">${u.email}</td><td class="p-3">${u.emp_no || '-'}</td><td class="p-3">${u.role}</td><td class="p-3"><span class="status-badge ${statusClass}">${status}</span></td>
+            <td class="p-3"><div class="flex gap-2 flex-wrap">${!u.approved ? `<button onclick="adminApproveUser('${u.id}')" class="btn-success px-3 py-1 rounded text-xs"><i class="fas fa-check"></i> Approve</button>` : ''}
+            ${u.approved && !isCurrentUser ? `<button onclick="adminBlockUser('${u.id}')" class="btn-danger px-3 py-1 rounded text-xs"><i class="fas ${u.blocked ? 'fa-unlock-alt' : 'fa-ban'}"></i> ${u.blocked ? 'Unblock' : 'Block'}</button>` : ''}
+            ${!isCurrentUser ? `<button onclick="openAdminEditUser('${u.id}')" class="btn-info px-3 py-1 rounded text-xs"><i class="fas fa-edit"></i> Edit</button>` : ''}
+            ${!isCurrentUser ? `<button onclick="adminDeleteUser('${u.id}')" class="btn-danger px-3 py-1 rounded text-xs"><i class="fas fa-trash"></i> Delete</button>` : '<span class="text-xs text-gray-400">Current</span>'}</div></td></tr>`;
+        });
+        html += `</tbody></table></div><div class="mt-4 text-sm text-gray-500">Total Users: ${users.length}</div><button onclick="showSection('dashboard')" class="btn-secondary mt-4 py-2 px-4 rounded-lg">Back</button>`;
+        document.getElementById('contentArea').innerHTML = html;
+    }
+    
+    async function showDetail(id, type) {
+        closeModal();
+        if(type === 'gate') {
+            const g = gatePasses.find(g => g.id === id);
+            if(!g) return;
+            let canApprove = false;
+            if(currentUser?.role === 'approval_dept' && g.approval_step === 'approval_dept') canApprove = true;
+            else if(currentUser?.role === 'manager' && g.approval_step === 'manager') canApprove = true;
+            else if(currentUser?.role === 'admin' && g.approval_step === 'admin') canApprove = true;
+            let itemsHtml = '<table class="w-full border mt-3"><tr class="bg-gray-100"><th class="p-2">Item</th><th>Qty</th><th>Unit</th><th>Remarks</th></tr>';
+            g.items.forEach(i => itemsHtml += `<tr><td class="p-2">${i.name}</td><td class="p-2">${i.qty}</td><td class="p-2">${i.unit}</td><td class="p-2">${i.remarks || '-'}</td></tr>`);
+            itemsHtml += '</table>';
+            const editBtn = (g.approval_step !== 'admin' && g.created_by_id === currentUser?.id) ? `<button onclick="openEditGateModal('${g.id}')" class="btn-warning w-full mt-2 py-2 rounded-lg"><i class="fas fa-edit mr-2"></i>Edit Gate Pass</button>` : '';
+            const modalContent = `<div><h3 class="font-bold text-xl">Gate Pass ${g.display_number || g.id}</h3><div class="grid grid-cols-2 gap-2 mt-3"><div><b>Dept:</b> ${g.department}</div><div><b>Date:</b> ${g.gate_date}</div><div><b>Requester:</b> ${g.requester_name}</div><div><b>Driver:</b> ${g.driver_name}</div><div><b>Vehicle:</b> ${g.vehicle_no}</div><div><b>Type:</b> ${g.gate_type || 'Outgoing'}</div><div><b>Location:</b> ${g.location}</div><div><b>Status:</b> ${GATE_STEP_NAMES[g.approval_step]}</div></div>${itemsHtml}${canApprove ? `<button onclick="approveGate('${g.id}')" class="btn-success w-full mt-4 py-2 rounded-lg">? Approve This Gate Pass</button>` : ''}${editBtn}<div class="text-xs text-gray-400 mt-3">Created: ${new Date(g.created_at).toLocaleString()} by ${g.created_by}</div></div>`;
+            showModal('Gate Pass Details', modalContent);
+        } else {
+            const r = materialRequests.find(r => r.id === id);
+            if(!r) return;
+            let canApprove = false;
+            if(currentUser?.role === 'storekeeper' && r.approval_step === 'storekeeper') canApprove = true;
+            else if(currentUser?.role === 'engineer' && r.approval_step === 'engineer') canApprove = true;
+            else if(currentUser?.role === 'manager' && r.approval_step === 'manager') canApprove = true;
+            else if(currentUser?.role === 'purchaser' && r.approval_step === 'purchaser') canApprove = true;
+            else if(currentUser?.role === 'admin' && r.approval_step === 'admin') canApprove = true;
+            let itemsHtml = '<table class="w-full border mt-3"><tr class="bg-gray-100"><th class="p-2">Item</th><th>Qty</th><th>Unit</th><th>Remarks</th></tr>';
+            r.items.forEach(i => itemsHtml += `<tr><td class="p-2">${i.name}</td><td class="p-2">${i.qty}</td><td class="p-2">${i.unit}</td><td class="p-2">${i.remarks || '-'}</td></tr>`);
+            itemsHtml += '</table>';
+            const modalContent = `<div><h3 class="font-bold text-xl">Material Request ${r.display_number || r.id}</h3><div class="grid grid-cols-2 gap-2 mt-3"><div><b>MR No:</b> ${r.display_number || r.id}</div><div><b>Dept:</b> ${r.department}</div><div><b>Project:</b> ${r.project_name}</div><div><b>Employee:</b> ${r.employee_name || r.employee_no}</div><div><b>Status:</b> ${REQ_STEP_NAMES[r.approval_step]}</div></div>${itemsHtml}${canApprove ? `<button onclick="approveRequest('${r.id}')" class="btn-success w-full mt-4 py-2 rounded-lg">? Approve This Request</button>` : ''}<div class="text-xs text-gray-400 mt-3">Created: ${new Date(r.created_at).toLocaleString()} by ${r.created_by}</div></div>`;
+            showModal('Material Request Details', modalContent);
+        }
+    }
+    
+    function approveGate(id) { const gate = gatePasses.find(g => g.id === id); if(!gate) return; const currentIdx = GATE_STEPS.indexOf(gate.approval_step); if(currentIdx !== -1 && currentIdx < GATE_STEPS.length - 1) { gate.approval_step = GATE_STEPS[currentIdx + 1]; saveAll(); addNotification(gate.created_by_id, 'Gate Pass Update', `Gate Pass ${gate.display_number} ${gate.approval_step === 'admin' ? 'APPROVED' : 'moved to ' + GATE_STEP_NAMES[gate.approval_step]}`, id, 'gate'); showModal('Success', `Gate Pass ${gate.display_number} approved!`); loadStats(); showSection('pendingApprovals'); } closeModal(); }
+    function approveRequest(id) { const req = materialRequests.find(r => r.id === id); if(!req) return; const currentIdx = REQ_STEPS.indexOf(req.approval_step); if(currentIdx !== -1 && currentIdx < REQ_STEPS.length - 1) { req.approval_step = REQ_STEPS[currentIdx + 1]; saveAll(); addNotification(req.created_by_id, 'Request Update', `Request ${req.display_number} ${req.approval_step === 'admin' ? 'APPROVED' : 'moved to ' + REQ_STEP_NAMES[req.approval_step]}`, id, 'request'); showModal('Success', `Request ${req.display_number} approved!`); loadStats(); showSection('pendingApprovals'); } closeModal(); }
+    
+    // Gate Pass Form
+    function showGateForm() { gateItems = [{ name: '', qty: 1, unit: 'Piece', remarks: '' }]; renderGateForm(); }
+    function renderGateForm() {
+        const nextNumber = getNextGateNumber();
+        let itemsHtml = '';
+        gateItems.forEach((it, idx) => { itemsHtml += `<div class="item-row"><span class="w-8 font-bold">${idx+1}</span><input type="text" placeholder="Item Name" value="${it.name}" onchange="updateGateItem(${idx},'name',this.value)" class="flex-1 p-2 border rounded"><input type="number" placeholder="Qty" value="${it.qty}" onchange="updateGateItem(${idx},'qty',this.value)" class="w-24 p-2 border rounded"><select onchange="updateGateItem(${idx},'unit',this.value)" class="w-28 p-2 border rounded">${UNITS.map(u => `<option ${it.unit===u?'selected':''}>${u}</option>`).join('')}</select><input type="text" placeholder="Remarks" value="${it.remarks}" onchange="updateGateItem(${idx},'remarks',this.value)" class="flex-1 p-2 border rounded"><button onclick="removeGateItem(${idx})" class="bg-red-500 text-white px-3 py-1 rounded">?</button></div>`; });
+        document.getElementById('contentArea').innerHTML = `<h2 class="text-xl font-bold mb-4">?? Create Gate Pass</h2><div class="bg-green-50 p-3 rounded-lg mb-4 border border-green-200"><span class="font-bold">Gate Pass Number:</span> <span class="text-lg text-blue-600 font-bold">GP-${nextNumber.toString().padStart(4, '0')}</span> <span class="text-xs text-gray-500 ml-2">(Auto-generated)</span></div><p class="text-sm text-gray-600 mb-4">Workflow: You ? Approval Dept ? Manager ? Admin</p>
+        <div class="grid md:grid-cols-2 gap-4"><div class="form-group"><label>Department</label><select id="dept" class="w-full p-3 border rounded">${DEPARTMENTS.map(d => `<option>${d}</option>`).join('')}</select></div>
+        <div class="form-group"><label>Gate Date</label><input type="date" id="date" value="${new Date().toISOString().split('T')[0]}" class="w-full p-3 border rounded"></div>
+        <div class="form-group"><label>Driver Name</label><input id="driver" class="w-full p-3 border rounded"></div>
+        <div class="form-group"><label>Vehicle Number</label><input id="vehicle" class="w-full p-3 border rounded"></div>
+        <div class="form-group"><label>Vehicle Type</label><select id="vehicleType" class="w-full p-3 border rounded">${VEHICLE_TYPES.map(v => `<option>${v}</option>`).join('')}</select></div>
+        <div class="form-group"><label>Gate Pass Type</label><select id="gateType" class="w-full p-3 border rounded">${GATE_TYPES.map(t => `<option>${t}</option>`).join('')}</select></div>
+        <div class="form-group"><label>Location</label><select id="loc" class="w-full p-3 border rounded">${LOCATIONS.map(l => `<option>${l}</option>`).join('')}</select></div></div>
+        <div class="mt-4"><label class="font-bold">Materials:</label><div id="itemsContainer">${itemsHtml}</div><button onclick="addGateItem()" class="bg-gray-500 text-white px-4 py-2 rounded text-sm mt-2">+ Add Item</button></div>
+        <button onclick="submitGate()" class="btn-primary w-full mt-4 py-3 rounded-lg font-semibold">Submit Gate Pass</button>`;
+    }
+    function addGateItem() { gateItems.push({ name: '', qty: 1, unit: 'Piece', remarks: '' }); renderGateForm(); }
+    function removeGateItem(i) { gateItems.splice(i,1); renderGateForm(); }
+    function updateGateItem(i,f,v) { gateItems[i][f] = v; }
+    function submitGate() {
+        const valid = gateItems.filter(i => i.name.trim());
+        if(valid.length===0) { showModal('Error','Add at least one item'); return; }
+        const nextNumber = getNextGateNumber();
+        const displayNumber = `GP-${nextNumber.toString().padStart(4, '0')}`;
+        const id = `GP-${Date.now().toString().slice(-6)}`;
+        const gate = { id, display_number: displayNumber, serial_number: nextNumber, created_by_id: currentUser.id, created_by: currentUser.full_name,
+            department: document.getElementById('dept').value, gate_date: document.getElementById('date').value,
+            requester_name: currentUser.full_name, driver_name: document.getElementById('driver').value,
+            vehicle_no: document.getElementById('vehicle').value, vehicle_type: document.getElementById('vehicleType').value,
+            gate_type: document.getElementById('gateType').value, location: document.getElementById('loc').value,
+            items: valid.map((it,i)=>({sr:i+1, name:it.name, unit:it.unit, qty:it.qty, remarks:it.remarks})),
+            approval_step: 'approval_dept', created_at: new Date().toISOString() };
+        gatePasses.unshift(gate);
+        saveAll();
+        showModal('Success', `Gate Pass ${displayNumber} submitted! You'll receive notifications when approved.`);
+        loadStats();
+        showSection('myRequests');
+    }
+    
+    // Material Request Form
+    function showRequestForm() { reqItems = [{ name: '', qty: 1, unit: 'Piece', remarks: '' }]; renderRequestForm(); }
+    function renderRequestForm() {
+        const nextNumber = getNextMRNumber();
+        let itemsHtml = '';
+        reqItems.forEach((it, idx) => { itemsHtml += `<div class="item-row"><span class="w-8 font-bold">${idx+1}</span><input type="text" placeholder="Item Name" value="${it.name}" onchange="updateReqItem(${idx},'name',this.value)" class="flex-1 p-2 border rounded"><input type="number" placeholder="Qty" value="${it.qty}" onchange="updateReqItem(${idx},'qty',this.value)" class="w-24 p-2 border rounded"><select onchange="updateReqItem(${idx},'unit',this.value)" class="w-28 p-2 border rounded">${UNITS.map(u => `<option ${it.unit===u?'selected':''}>${u}</option>`).join('')}</select><input type="text" placeholder="Remarks" value="${it.remarks}" onchange="updateReqItem(${idx},'remarks',this.value)" class="flex-1 p-2 border rounded"><button onclick="removeReqItem(${idx})" class="bg-red-500 text-white px-3 py-1 rounded">?</button></div>`; });
+        document.getElementById('contentArea').innerHTML = `<h2 class="text-xl font-bold mb-4">?? Create Material Request</h2><div class="bg-green-50 p-3 rounded-lg mb-4 border border-green-200"><span class="font-bold">MR Number:</span> <span class="text-lg text-green-600 font-bold">MR-${nextNumber.toString().padStart(4, '0')}</span> <span class="text-xs text-gray-500 ml-2">(Auto-generated)</span></div><p class="text-sm text-gray-600 mb-4">Workflow: You ? Store Keeper ? Engineer ? Manager ? Purchaser ? Admin</p>
+        <div class="grid md:grid-cols-2 gap-4"><div class="form-group"><label>Department</label><select id="dept" class="w-full p-3 border rounded">${DEPARTMENTS.map(d => `<option>${d}</option>`).join('')}</select></div>
+        <div class="form-group"><label>Request Date</label><input type="date" id="date" value="${new Date().toISOString().split('T')[0]}" class="w-full p-3 border rounded"></div>
+        <div class="form-group"><label>Project Name</label><input id="projName" class="w-full p-3 border rounded"></div>
+        <div class="form-group"><label>Project Number</label><input id="projNo" class="w-full p-3 border rounded"></div>
+        <div class="form-group"><label>Employee Number</label><input id="empNo" class="w-full p-3 border rounded"></div>
+        <div class="form-group"><label>Employee Name</label><input id="empName" class="w-full p-3 border rounded"></div></div>
+        <div class="mt-4"><label class="font-bold">Materials:</label><div id="reqItemsContainer">${itemsHtml}</div><button onclick="addReqItem()" class="bg-gray-500 text-white px-4 py-2 rounded text-sm mt-2">+ Add Item</button></div>
+        <button onclick="submitRequest()" class="btn-primary w-full mt-4 py-3 rounded-lg font-semibold">Submit Material Request</button>`;
+    }
+    function addReqItem() { reqItems.push({ name: '', qty: 1, unit: 'Piece', remarks: '' }); renderRequestForm(); }
+    function removeReqItem(i) { reqItems.splice(i,1); renderRequestForm(); }
+    function updateReqItem(i,f,v) { reqItems[i][f] = v; }
+    function submitRequest() {
+        const valid = reqItems.filter(i => i.name.trim());
+        if(valid.length===0) { showModal('Error','Add at least one item'); return; }
+        const nextNumber = getNextMRNumber();
+        const displayNumber = `MR-${nextNumber.toString().padStart(4, '0')}`;
+        const id = `MR-${Date.now().toString().slice(-6)}`;
+        const req = { id, display_number: displayNumber, serial_number: nextNumber, created_by_id: currentUser.id, created_by: currentUser.full_name,
+            department: document.getElementById('dept').value, request_date: document.getElementById('date').value,
+            project_name: document.getElementById('projName').value, project_no: document.getElementById('projNo').value,
+            employee_no: document.getElementById('empNo').value, employee_name: document.getElementById('empName').value,
+            items: valid.map((it,i)=>({sr:i+1, name:it.name, unit:it.unit, qty:it.qty, remarks:it.remarks})),
+            approval_step: 'storekeeper', created_at: new Date().toISOString() };
+        materialRequests.unshift(req);
+        saveAll();
+        showModal('Success', `Request ${displayNumber} submitted! You'll receive notifications when approved.`);
+        loadStats();
+        showSection('myRequests');
+    }
+    
+    function showAllData() { showSection('gatePasses'); }
+    
+    // Restore session
+    const savedSession = localStorage.getItem('rawabi_current_online_final');
+    if(savedSession) {
+        const parsed = JSON.parse(savedSession);
+        const foundUser = users.find(u => u.id === parsed.id && u.approved && !u.blocked);
+        if(foundUser) { currentUser = foundUser; document.getElementById('loginScreen').style.display = 'none'; document.getElementById('dashboard').style.display = 'block'; document.getElementById('userNameDisplay').innerHTML = foundUser.full_name; document.getElementById('userEmpNoDisplay').innerHTML = foundUser.emp_no ? `Emp: ${foundUser.emp_no}` : ''; document.getElementById('userRoleDisplay').innerHTML = foundUser.role; if(foundUser.role === 'admin') document.getElementById('adminPanel').style.display = 'block'; loadStats(); updateNotificationUI(); showSection('dashboard'); }
+    }
+</script>
+</body>
+</html>
